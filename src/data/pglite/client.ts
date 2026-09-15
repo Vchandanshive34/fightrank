@@ -21,7 +21,22 @@ import { createPostgrestShim } from './shim'
 import type { PostgrestLike } from '../postgrest'
 
 const DATABASE_URL = 'idb://fightrank'
-const SCHEMA_VERSION = '1'
+
+/**
+ * Bump this whenever the migrations change shape.
+ *
+ * The database lives in the visitor's IndexedDB and survives deployments, so a
+ * returning visitor arrives holding whatever schema they were last given. The
+ * migrations are written with `create table if not exists`, which cannot alter
+ * a table that already exists — so an old database is not upgraded in place,
+ * it is rebuilt. That is safe here precisely because this database holds
+ * nothing irreplaceable: every row comes from `seed.sql`, and every rating,
+ * ranking and movement is derived from those rows by the engine.
+ *
+ *   1 — single-discipline schema
+ *   2 — disciplines + fighter_disciplines (the unified Fighter ID)
+ */
+const SCHEMA_VERSION = '2'
 
 const MIGRATIONS: Array<[string, string]> = [
   ['0001_schema', schema0001],
@@ -40,19 +55,41 @@ export interface LocalDatabase {
   freshlySeeded: boolean
 }
 
-async function applySchema(pg: PGlite): Promise<boolean> {
-  const existing = await pg.query<{ exists: boolean }>(
+/** The schema version this database was built with, if it records one. */
+async function storedVersion(pg: PGlite): Promise<string | null> {
+  const meta = await pg.query<{ exists: boolean }>(
     `select exists (
        select 1 from information_schema.tables
        where table_schema = 'public' and table_name = 'fightrank_meta'
      ) as exists`,
   )
+  if (!meta.rows[0]?.exists) return null
 
-  if (existing.rows[0]?.exists) {
-    const version = await pg.query<{ value: string }>(
-      `select value from public.fightrank_meta where key = 'schema_version'`,
-    )
-    if (version.rows[0]?.value === SCHEMA_VERSION) return false
+  const version = await pg.query<{ value: string }>(
+    `select value from public.fightrank_meta where key = 'schema_version'`,
+  )
+  return version.rows[0]?.value ?? null
+}
+
+/** Does this database already hold a schema of some sort? */
+async function hasPublicTables(pg: PGlite): Promise<boolean> {
+  const result = await pg.query<{ exists: boolean }>(
+    `select exists (
+       select 1 from information_schema.tables where table_schema = 'public'
+     ) as exists`,
+  )
+  return result.rows[0]?.exists ?? false
+}
+
+async function applySchema(pg: PGlite): Promise<boolean> {
+  const version = await storedVersion(pg)
+  if (version === SCHEMA_VERSION) return false
+
+  // Anything already here was built by an older version of the app — either a
+  // recorded one, or one old enough to predate `fightrank_meta` entirely. It
+  // cannot be migrated in place, so it goes and is rebuilt from the seed.
+  if (version !== null || (await hasPublicTables(pg))) {
+    await pg.exec(`drop schema public cascade; create schema public;`)
   }
 
   await pg.exec(AUTH_STUB_SQL)
