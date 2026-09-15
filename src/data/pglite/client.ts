@@ -88,8 +88,16 @@ async function applySchema(pg: PGlite): Promise<boolean> {
   // Anything already here was built by an older version of the app — either a
   // recorded one, or one old enough to predate `fightrank_meta` entirely. It
   // cannot be migrated in place, so it goes and is rebuilt from the seed.
+  //
+  // `auth` goes with it. The demo administrator spans both schemas — the login
+  // in `auth`, the role in `public.profiles` — so keeping one while replacing
+  // the other leaves an account that can sign in but has no profile.
   if (version !== null || (await hasPublicTables(pg))) {
-    await pg.exec(`drop schema public cascade; create schema public;`)
+    await pg.exec(`
+      drop schema public cascade;
+      drop schema if exists auth cascade;
+      create schema public;
+    `)
   }
 
   await pg.exec(AUTH_STUB_SQL)
