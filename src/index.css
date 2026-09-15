@@ -1,0 +1,192 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   FIGHTRANK design system (§32)
+   Dark neutral foundation · white typography · one accent · movement colours
+   ========================================================================== */
+
+@theme {
+  --color-ink-900: #08080a;
+  --color-ink-850: #0b0b0e;
+  --color-ink-800: #101014;
+  --color-ink-700: #16161b;
+  --color-ink-600: #1d1d24;
+  --color-ink-500: #272730;
+  --color-line: #24242c;
+  --color-line-soft: #1b1b22;
+
+  --color-chalk: #f5f5f7;
+  --color-chalk-dim: #b9b9c2;
+  --color-muted: #7b7b86;
+  --color-faint: #55555f;
+
+  --color-signal: #ffb525;
+  --color-signal-bright: #ffcb5c;
+  --color-signal-dim: #8a5f11;
+  --color-signal-wash: rgba(255, 181, 37, 0.12);
+
+  --color-rise: #34c17b;
+  --color-fall: #ef4e57;
+  --color-flat: #55555f;
+
+  --font-display: 'Barlow Condensed', 'Oswald', 'Arial Narrow', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+
+  --ease-out-fast: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-ink-900);
+    color: var(--color-chalk);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.02;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  ::selection {
+    background: var(--color-signal);
+    color: #17130a;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-signal);
+    outline-offset: 2px;
+  }
+
+  /* Scrollbars kept dark so overflow areas do not flash white. */
+  * {
+    scrollbar-color: var(--color-ink-500) transparent;
+    scrollbar-width: thin;
+  }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-ink-500);
+    border: 3px solid var(--color-ink-900);
+    border-radius: 6px;
+  }
+
+  input, select, textarea, button { font: inherit; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Numerals that carry weight: ranks, ratings, records. */
+  .numeral {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .eyebrow {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .rule {
+    border-top: 1px solid var(--color-line);
+  }
+
+  .panel {
+    background: var(--color-ink-800);
+    border: 1px solid var(--color-line);
+  }
+
+  .hairline-grid {
+    background-image:
+      linear-gradient(to right, var(--color-line-soft) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--color-line-soft) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+
+  .accent-underline {
+    position: relative;
+  }
+  .accent-underline::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--color-signal);
+  }
+}
+
+@layer utilities {
+  .animate-rise {
+    animation: fr-rise 320ms var(--ease-out-fast) both;
+  }
+  .animate-fade {
+    animation: fr-fade 220ms var(--ease-out-fast) both;
+  }
+  .animate-sweep {
+    animation: fr-sweep 520ms var(--ease-out-fast) both;
+  }
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--color-ink-700) 0%,
+      var(--color-ink-600) 40%,
+      var(--color-ink-700) 80%
+    );
+    background-size: 300% 100%;
+    animation: fr-shimmer 1.4s linear infinite;
+  }
+}
+
+@keyframes fr-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fr-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fr-sweep {
+  from { opacity: 0; clip-path: inset(0 100% 0 0); }
+  to { opacity: 1; clip-path: inset(0 0 0 0); }
+}
+@keyframes fr-shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -150% 0; }
+}
