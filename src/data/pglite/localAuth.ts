@@ -30,24 +30,38 @@ async function digest(value: string): Promise<string> {
 export function createLocalAuth(pg: PGlite): AuthProvider {
   const listeners = new Set<(session: AuthSession | null) => void>()
 
+  /**
+   * Make sure the demo administrator exists, in both halves.
+   *
+   * The account spans two schemas: the login in `auth`, the role in `public`.
+   * Those are not rebuilt together — `public` is dropped and reseeded whenever
+   * the schema version changes, while `auth` persists — so checking only for
+   * the login would leave a database where signing in succeeds and then finds
+   * no profile. Each half is therefore checked, and repaired, on its own.
+   */
   const ensureSeedUser = async (): Promise<void> => {
     const existing = await pg.query<{ id: string }>(
-      `select id from auth.users where email = $1`,
+      `select id from auth.users where lower(email) = lower($1)`,
       [DEMO_ADMIN.email],
     )
-    if (existing.rows.length > 0) return
-    const password = await digest(DEMO_ADMIN.password)
-    const inserted = await pg.query<{ id: string }>(
-      `insert into auth.users (email, encrypted_password, raw_user_meta_data)
-       values ($1, $2, '{"display_name":"Demo Administrator"}'::jsonb)
-       returning id`,
-      [DEMO_ADMIN.email, password],
-    )
+
+    let userId = existing.rows[0]?.id
+    if (!userId) {
+      const password = await digest(DEMO_ADMIN.password)
+      const inserted = await pg.query<{ id: string }>(
+        `insert into auth.users (email, encrypted_password, raw_user_meta_data)
+         values ($1, $2, '{"display_name":"Demo Administrator"}'::jsonb)
+         returning id`,
+        [DEMO_ADMIN.email, password],
+      )
+      userId = inserted.rows[0].id
+    }
+
     await pg.query(
       `insert into public.profiles (id, email, display_name, role)
        values ($1, $2, 'Demo Administrator', 'admin')
        on conflict (id) do nothing`,
-      [inserted.rows[0].id, DEMO_ADMIN.email],
+      [userId, DEMO_ADMIN.email],
     )
   }
 
