@@ -1,46 +1,78 @@
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Crown, TrendingUp } from 'lucide-react'
 import { useApp, useRepository } from '@/hooks/useData'
 import { useAsync } from '@/hooks/useAsync'
-import { FighterAvatar } from '@/components/FighterAvatar'
-import { MoversList } from '@/components/MoversList'
-import { FightRow } from '@/components/FightRow'
-import { Movement } from '@/components/Movement'
-import {
-  Button,
-  Container,
-  EmptyState,
-  ErrorState,
-  SectionHeader,
-  Skeleton,
-} from '@/components/ui'
+import { Button, EmptyState, ErrorState, Skeleton } from '@/components/ui'
+import type { EventCard } from '@/data/mappers'
 import type { DashboardStats } from '@/data/repository'
+import type { RankingRow } from '@/types/domain'
 import { flagOf, record, shortDate } from '@/lib/format'
+
+/**
+ * Home page.
+ *
+ * Laid out the way the Warriors Dream Series site is: a video hero, one
+ * featured card, a filterable grid of past events, champion cards, and the
+ * season schedule. Every section reads from the database — nothing on this
+ * page is written by hand, so an empty install shows honest empty states
+ * rather than invented fighters.
+ */
+
+/**
+ * YouTube id for the looping hero background. Set to an empty string to drop
+ * the video and fall back to the still gradient.
+ */
+const HERO_VIDEO_ID = 'F2Uu6WP3tu0'
+
+/** Shared width — WDS runs a 1240px column rather than the app's wider 1400. */
+const WRAP = 'mx-auto w-full max-w-[1240px] px-4 sm:px-6'
 
 export default function Home() {
   const repository = useRepository()
-  const { revision } = useApp()
+  const { revision, disciplines } = useApp()
+  const [filter, setFilter] = useState<string>('all')
 
   const { data, error, loading, reload } = useAsync(
     async () => {
-      const [champions, p4p, movers, results, upcoming, stats] = await Promise.all([
+      const [scheduled, completed, champions, stats] = await Promise.all([
+        repository.listEvents({ status: 'scheduled', pageSize: 6 }),
+        repository.listEvents({ status: 'completed', pageSize: 12 }),
         repository.listChampions(),
-        repository.listP4P(5),
-        repository.listMovers(6),
-        repository.listFights({ status: 'completed', limit: 6 }),
-        repository.listEvents({ status: 'scheduled', pageSize: 3 }),
         repository.dashboardStats(),
       ])
-      return { champions, p4p, movers, results, upcoming: upcoming.rows, stats }
+      return {
+        scheduled: scheduled.rows,
+        completed: completed.rows,
+        champions,
+        stats,
+      }
     },
     [repository, revision],
   )
 
+  // The card at the top is whatever matters most right now: the next scheduled
+  // event if one exists, otherwise the most recent completed one.
+  const featured = data?.scheduled[0] ?? data?.completed[0] ?? null
+
+  const past = useMemo(() => {
+    const rows = data?.completed ?? []
+    if (filter === 'all') return rows.slice(0, 6)
+    return rows.filter((event) => event.disciplineCodes.includes(filter)).slice(0, 6)
+  }, [data?.completed, filter])
+
+  const schedule = useMemo(() => {
+    const rows = [...(data?.scheduled ?? []), ...(data?.completed ?? [])]
+    return rows
+      .sort((a, b) => b.eventDate.localeCompare(a.eventDate))
+      .slice(0, 6)
+  }, [data?.scheduled, data?.completed])
+
   if (error) {
     return (
-      <Container className="py-16">
+      <div className={`${WRAP} py-16`}>
         <ErrorState error={error} onRetry={reload} />
-      </Container>
+      </div>
     )
   }
 
@@ -48,204 +80,139 @@ export default function Home() {
     <>
       <Hero stats={data?.stats ?? null} />
 
-      <Container className="py-12 sm:py-16">
-        <div className="grid gap-12 lg:grid-cols-[1.6fr_1fr] lg:gap-14">
-          <div className="min-w-0 space-y-14">
-            <section>
-              <SectionHeader
-                eyebrow="Reigning"
-                title="Champions"
-                action={
-                  <Link to="/rankings" className="text-sm text-muted transition hover:text-signal">
-                    All divisions →
-                  </Link>
-                }
-              />
-              {loading ? (
-                <div className="grid gap-px sm:grid-cols-2">
-                  {Array.from({ length: 6 }, (_, i) => (
-                    <Skeleton key={i} className="h-20" />
-                  ))}
-                </div>
-              ) : data && data.champions.length > 0 ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {data.champions.map((row) => (
-                    <Link
-                      key={row.fighterId}
-                      to={`/fighters/${row.fighter.slug}`}
-                      className="group flex items-center gap-3 border border-line bg-ink-800 p-3 transition-colors hover:border-signal/50"
-                    >
-                      <FighterAvatar
-                        id={row.fighterId}
-                        name={row.fighter.displayName}
-                        photoUrl={row.fighter.photoUrl}
-                        size="md"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="eyebrow flex items-center gap-1 text-[0.58rem] text-signal">
-                          <Crown className="size-3" />
-                          <span className="text-faint">{row.fighter.disciplineCode}</span>
-                          {row.fighter.divisionName}
-                        </div>
-                        <div className="truncate font-display text-lg font-bold uppercase text-chalk transition-colors group-hover:text-signal">
-                          {row.fighter.displayName}
-                        </div>
-                        <div className="truncate text-xs text-muted">
-                          {flagOf(row.fighter.countryCode)} {record(row.fighter)} · rating{' '}
-                          {Math.round(row.rating)}
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState
-                  title="No champions yet"
-                  description="A champion is crowned the moment a title fight result is recorded."
-                />
-              )}
-            </section>
+      <FeaturedEvent event={featured} loading={loading} />
 
-            <section>
-              <SectionHeader
-                eyebrow="Just recorded"
-                title="Latest results"
-                action={
-                  <Link to="/events" className="text-sm text-muted transition hover:text-signal">
-                    All events →
-                  </Link>
-                }
-              />
-              {loading ? (
-                <div className="space-y-px">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <Skeleton key={i} className="h-20" />
-                  ))}
-                </div>
-              ) : data && data.results.length > 0 ? (
-                <div className="border-t border-line-soft">
-                  {data.results.map((fight) => (
-                    <FightRow key={fight.id} fight={fight} showEvent />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState title="No results recorded yet" />
-              )}
-            </section>
-          </div>
+      {/* ---------- Past events ---------- */}
+      <section className="py-[70px]">
+        <div className={WRAP}>
+          <SectionHead eyebrow="The season so far" title="Past events" />
 
-          <div className="min-w-0 space-y-14">
-            <section>
-              <SectionHeader
-                eyebrow="Across every division"
-                title="Pound for pound"
-                action={
-                  <Link to="/p4p" className="text-sm text-muted transition hover:text-signal">
-                    Full list →
-                  </Link>
-                }
-              />
-              {loading ? (
-                <div className="space-y-px">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <Skeleton key={i} className="h-14" />
-                  ))}
-                </div>
-              ) : (
-                <ul>
-                  {(data?.p4p ?? []).map((row) => (
-                    <li key={row.fighterId} className="border-b border-line-soft last:border-b-0">
-                      <Link
-                        to={`/fighters/${row.fighter.slug}`}
-                        className="group flex items-center gap-3 py-2.5"
-                      >
-                        <span className="numeral w-7 text-center text-xl text-signal">
-                          {row.position}
-                        </span>
-                        <FighterAvatar
-                          id={row.fighterId}
-                          name={row.fighter.displayName}
-                          photoUrl={row.fighter.photoUrl}
-                          size="sm"
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-chalk transition-colors group-hover:text-signal">
-                            {row.fighter.displayName}
-                          </span>
-                          <span className="block truncate text-xs text-muted">
-                            {row.fighter.divisionName} · {record(row.fighter)}
-                          </span>
-                        </span>
-                        <Movement movement={row.movement} label={row.movementLabel} size="sm" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+          {disciplines.length > 1 ? (
+            <div className="mb-9 flex flex-wrap justify-center gap-3.5">
+              {[{ shortCode: 'all', name: 'All' }, ...disciplines].map((discipline) => {
+                const value = discipline.shortCode
+                const active = filter === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setFilter(value)}
+                    className={
+                      'rounded-xs border px-5 py-2.5 text-[0.82rem] font-semibold uppercase tracking-[0.08em] transition-colors ' +
+                      (active
+                        ? 'border-signal bg-signal text-white'
+                        : 'border-line text-muted hover:border-signal hover:bg-signal hover:text-white')
+                    }
+                  >
+                    {discipline.name}
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
 
-            <section>
-              <SectionHeader
-                eyebrow="Since the last card"
-                title="Biggest movers"
-                action={
-                  <Link to="/movers" className="text-sm text-muted transition hover:text-signal">
-                    All movement →
-                  </Link>
-                }
-              />
-              {loading ? (
-                <div className="space-y-px">
-                  {Array.from({ length: 4 }, (_, i) => (
-                    <Skeleton key={i} className="h-16" />
-                  ))}
-                </div>
-              ) : (
-                <MoversList movers={data?.movers ?? []} />
-              )}
-            </section>
-
-            <section>
-              <SectionHeader eyebrow="Next up" title="Upcoming" />
-              {loading ? (
-                <Skeleton className="h-28" />
-              ) : (data?.upcoming.length ?? 0) === 0 ? (
-                <EmptyState title="Nothing scheduled" description="Add an event in the admin panel." />
-              ) : (
-                <ul className="space-y-3">
-                  {data?.upcoming.map((event) => (
-                    <li key={event.id}>
-                      <Link
-                        to={`/events/${event.slug}`}
-                        className="group block border border-line bg-ink-800 p-4 transition-colors hover:border-signal/50"
-                      >
-                        <div className="eyebrow text-[0.58rem] text-signal">
-                          {shortDate(event.eventDate)}
-                        </div>
-                        <div className="mt-1 font-display text-xl font-bold uppercase text-chalk transition-colors group-hover:text-signal">
-                          {event.name}
-                        </div>
-                        {event.mainEventLabel ? (
-                          <div className="mt-1 truncate text-sm text-chalk-dim">
-                            {event.mainEventLabel}
-                          </div>
-                        ) : null}
-                        <div className="mt-1 text-xs text-muted">
-                          {[event.venue, event.city].filter(Boolean).join(' · ')} ·{' '}
-                          {event.boutCount} bouts
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </div>
+          {loading ? (
+            <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }, (_, i) => (
+                <Skeleton key={i} className="h-[300px]" />
+              ))}
+            </div>
+          ) : past.length === 0 ? (
+            <EmptyState
+              title="No completed events yet"
+              description="Cards appear here the moment their results are recorded in the admin panel."
+            />
+          ) : (
+            <>
+              <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
+                {past.map((event) => (
+                  <EventTile key={event.id} event={event} />
+                ))}
+              </div>
+              <div className="mt-9 text-center">
+                <Link to="/events">
+                  <Button variant="secondary" size="lg">
+                    Show all events
+                  </Button>
+                </Link>
+              </div>
+            </>
+          )}
         </div>
-      </Container>
+      </section>
+
+      {/* ---------- Champions ---------- */}
+      <section className="bg-ink-800 py-[70px]">
+        <div className={WRAP}>
+          <SectionHead eyebrow="The best of FIGHTRANK" title="Fighter rankings" />
+          {loading ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }, (_, i) => (
+                <Skeleton key={i} className="h-40" />
+              ))}
+            </div>
+          ) : (data?.champions.length ?? 0) === 0 ? (
+            <EmptyState
+              title="No champions yet"
+              description="A belt is awarded the moment a title-fight result is recorded — never by hand."
+            />
+          ) : (
+            <>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {data?.champions.slice(0, 6).map((row) => (
+                  <ChampionCard key={row.fighterId} row={row} />
+                ))}
+              </div>
+              <div className="mt-9 text-center">
+                <Link to="/rankings">
+                  <Button variant="secondary" size="lg" icon={<ArrowRight className="size-4" />}>
+                    Every division
+                  </Button>
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* ---------- Schedule ---------- */}
+      <section className="py-[70px]">
+        <div className={WRAP}>
+          <SectionHead eyebrow="Mark your calendar" title="Season schedule" />
+          {loading ? (
+            <div className="flex flex-col gap-3.5">
+              {Array.from({ length: 4 }, (_, i) => (
+                <Skeleton key={i} className="h-[72px]" />
+              ))}
+            </div>
+          ) : schedule.length === 0 ? (
+            <EmptyState
+              title="Nothing on the calendar"
+              description="Add an event in the admin panel and it appears here straight away."
+            />
+          ) : (
+            <div className="flex flex-col gap-3.5">
+              {schedule.map((event) => (
+                <ScheduleRow key={event.id} event={event} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
       <MethodologyStrip />
     </>
+  )
+}
+
+/* ------------------------------------------------------------------ pieces */
+
+function SectionHead({ eyebrow, title }: { eyebrow: string; title: string }) {
+  return (
+    <div className="mb-11 text-center">
+      <span className="eyebrow mb-2.5 inline-block">{eyebrow}</span>
+      <h2 className="text-[clamp(2rem,4vw,2.8rem)] text-chalk">{title}</h2>
+    </div>
   )
 }
 
@@ -255,58 +222,65 @@ function Hero({ stats }: { stats: DashboardStats | null }) {
     { label: 'Ranked athletes', value: stats?.fighters },
     { label: 'Recorded bouts', value: stats?.fights },
     // One division per discipline is the pound-for-pound list, not a weight class.
-    {
-      label: 'Divisions',
-      value: stats ? stats.divisions - stats.disciplines : undefined,
-    },
-    { label: 'Reigning champions', value: stats?.champions },
+    { label: 'Divisions', value: stats ? stats.divisions - stats.disciplines : undefined },
+    { label: 'Champions', value: stats?.champions },
   ]
+
   return (
-    <section className="relative overflow-hidden border-b border-line">
-      <div className="hairline-grid absolute inset-0 opacity-60" aria-hidden />
+    <section className="relative flex min-h-[560px] items-center overflow-hidden bg-ink-900 py-[120px] sm:min-h-[640px] sm:py-[150px]">
+      {/* The lit gradient sits under the video so the hero still reads right
+          if YouTube is blocked, slow, or switched off above. */}
       <div
         className="absolute inset-0"
         aria-hidden
         style={{
           background:
-            'radial-gradient(70% 90% at 15% 0%, rgba(255,181,37,0.12) 0%, transparent 60%)',
+            'radial-gradient(70% 90% at 15% 0%, rgba(215,39,42,0.18) 0%, transparent 60%), #050505',
         }}
       />
-      <Container className="relative py-16 sm:py-24 lg:py-28">
-        <div className="max-w-4xl">
-          <div className="eyebrow animate-fade mb-5 text-signal">
+      {HERO_VIDEO_ID ? (
+        <div className="hero-video" aria-hidden>
+          <iframe
+            src={`https://www.youtube.com/embed/${HERO_VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${HERO_VIDEO_ID}&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&disablekb=1`}
+            title="FIGHTRANK background video"
+            allow="autoplay; encrypted-media"
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        </div>
+      ) : null}
+      <div className="hero-scrim" aria-hidden />
+
+      <div className={`relative z-[2] ${WRAP}`}>
+        <div className="max-w-[860px] text-center lg:ml-auto lg:text-right">
+          <span className="eyebrow animate-fade mb-2.5 inline-block">
             Transparent competitive rankings
-          </div>
-          <h1 className="animate-rise text-[13vw] leading-[0.86] text-chalk sm:text-6xl lg:text-8xl">
-            Every fight
+          </span>
+          <h1 className="animate-rise text-[clamp(2.4rem,4.6vw,4.2rem)] leading-[1.02] text-chalk">
+            Every Fight Changes
             <br />
-            changes the
-            <br />
-            <span className="text-signal">ranking.</span>
+            <span className="text-signal">The Ranking</span>
           </h1>
-          <p className="animate-fade mt-6 max-w-xl text-base text-chalk-dim sm:text-lg">
-            Transparent combat-sports rankings powered by performance, opposition and momentum —
-            across mixed martial arts, grappling, wrestling, Muay Thai and kickboxing. Every
-            position is calculated from recorded results, and every movement comes with its
-            reasons.
+          <p className="animate-fade mx-auto mt-4.5 max-w-[620px] text-[1.05rem] leading-relaxed text-muted lg:mr-0">
+            Rankings across mixed martial arts, grappling, wrestling, Muay Thai and kickboxing —
+            calculated from recorded results, with every movement published alongside its reasons.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-wrap justify-center gap-3 lg:justify-end">
             <Link to="/rankings">
               <Button variant="primary" size="lg" icon={<ArrowRight className="size-4" />}>
                 View rankings
               </Button>
             </Link>
-            <Link to="/disciplines">
+            <Link to="/fighter-id">
               <Button variant="secondary" size="lg">
-                Browse disciplines
+                Fighter ID lookup
               </Button>
             </Link>
           </div>
         </div>
 
-        <dl className="mt-14 grid grid-cols-2 gap-px border border-line bg-line sm:mt-16 sm:grid-cols-5">
+        <dl className="mt-14 grid grid-cols-2 gap-px border border-line bg-line sm:grid-cols-5">
           {tiles.map((stat) => (
-            <div key={stat.label} className="bg-ink-900 px-4 py-5">
+            <div key={stat.label} className="bg-ink-900/85 px-4 py-5 backdrop-blur-sm">
               <dd className="numeral text-4xl leading-none text-chalk sm:text-5xl">
                 {stat.value === undefined ? (
                   <span className="text-ink-500">&mdash;</span>
@@ -314,12 +288,208 @@ function Hero({ stats }: { stats: DashboardStats | null }) {
                   stat.value.toLocaleString('en-GB')
                 )}
               </dd>
-              <dt className="eyebrow mt-2 text-[0.58rem]">{stat.label}</dt>
+              <dt className="mt-2 text-[0.62rem] font-semibold tracking-[0.18em] text-muted uppercase">
+                {stat.label}
+              </dt>
             </div>
           ))}
         </dl>
-      </Container>
+      </div>
     </section>
+  )
+}
+
+/** The offset white card over a wide event image — the WDS showcase block. */
+function FeaturedEvent({ event, loading }: { event: EventCard | null; loading: boolean }) {
+  if (loading) {
+    return (
+      <section className="py-[70px]">
+        <div className={WRAP}>
+          <Skeleton className="h-[380px]" />
+        </div>
+      </section>
+    )
+  }
+  if (!event) return null
+
+  const ended = event.status === 'completed'
+
+  return (
+    <section className="py-[70px]">
+      <div className={`${WRAP} flex flex-col items-center md:flex-row`}>
+        <div className="relative w-full md:w-[58%]">
+          <span className="absolute -top-3.5 left-7 z-[1] rounded-xs border border-ink-500 bg-ink-600 px-4 py-2 text-[0.78rem] font-bold tracking-[0.15em] text-chalk-dim uppercase">
+            {ended ? 'Event ended' : 'Upcoming'}
+          </span>
+          {event.posterUrl ? (
+            <img
+              src={event.posterUrl}
+              alt={event.name}
+              className="w-full rounded-md shadow-[0_30px_60px_rgba(0,0,0,0.7)]"
+            />
+          ) : (
+            <div
+              className="flex aspect-[16/10] w-full items-center justify-center rounded-md shadow-[0_30px_60px_rgba(0,0,0,0.7)]"
+              style={{
+                background:
+                  'linear-gradient(135deg, #1a0405 0%, #0d0d0d 55%), radial-gradient(60% 80% at 20% 10%, rgba(215,39,42,0.35), transparent 70%)',
+              }}
+            >
+              {/* The white card overlaps the right edge of this tile on
+                  desktop, so the placeholder title keeps clear of it. */}
+              <span className="numeral px-6 text-center text-[clamp(2rem,5vw,3.4rem)] text-signal md:pr-[22%] md:text-left">
+                {event.name}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="relative z-[2] -mt-10 w-full rounded-sm bg-white px-6 py-9 text-[#111] shadow-[-20px_20px_60px_rgba(0,0,0,0.6)] md:-mt-0 md:-ml-[8%] md:w-[46%] md:px-12 md:py-11">
+          <span className="eyebrow mb-2.5 inline-block">
+            {event.disciplineCodes.join(' · ') || 'Championship series'}
+          </span>
+          <h2 className="text-[2.2rem] text-black md:text-[2.6rem]">{event.name}</h2>
+          {event.mainEventLabel ? (
+            <p className="text-[#555]">{event.mainEventLabel}</p>
+          ) : null}
+
+          <div className="my-5 grid grid-cols-2 gap-4.5 border-y border-[#eee] py-5.5">
+            <div>
+              <strong className="mb-1 block text-[0.72rem] tracking-[0.12em] text-[#999] uppercase">
+                Date
+              </strong>
+              <span className="text-base font-semibold">{shortDate(event.eventDate)}</span>
+            </div>
+            <div>
+              <strong className="mb-1 block text-[0.72rem] tracking-[0.12em] text-[#999] uppercase">
+                Bouts
+              </strong>
+              <span className="text-base font-semibold">
+                {event.completedCount}/{event.boutCount} recorded
+              </span>
+            </div>
+            {event.venue || event.city ? (
+              <div className="col-span-2">
+                <strong className="mb-1 block text-[0.72rem] tracking-[0.12em] text-[#999] uppercase">
+                  Venue
+                </strong>
+                <span className="text-base font-semibold">
+                  {[event.venue, event.city, event.country].filter(Boolean).join(', ')}
+                </span>
+              </div>
+            ) : null}
+          </div>
+
+          <Link
+            to={`/events/${event.slug}`}
+            className="inline-flex items-center gap-2.5 rounded-xs bg-signal px-7 py-3.5 text-sm font-semibold tracking-[0.08em] text-white uppercase transition-colors hover:bg-black"
+          >
+            {ended ? 'View results' : 'View card'}
+            <ArrowRight className="size-4" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function EventTile({ event }: { event: EventCard }) {
+  return (
+    <Link
+      to={`/events/${event.slug}`}
+      className="lift group flex flex-col overflow-hidden rounded-md border border-line bg-ink-800"
+    >
+      <div className="aspect-[16/10] overflow-hidden bg-black">
+        {event.posterUrl ? (
+          <img
+            src={event.posterUrl}
+            alt={event.name}
+            className="size-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div
+            className="flex size-full items-center justify-center"
+            style={{
+              background:
+                'linear-gradient(135deg, #160304 0%, #0a0a0a 60%), radial-gradient(60% 80% at 25% 15%, rgba(215,39,42,0.3), transparent 70%)',
+            }}
+          >
+            <span className="numeral px-4 text-center text-3xl text-signal/80">{event.name}</span>
+          </div>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col p-5">
+        <span className="text-[0.7rem] font-bold tracking-[0.15em] text-signal uppercase">
+          {event.disciplineCodes.join(' · ') || 'Event'}
+        </span>
+        <h3 className="my-2 text-2xl text-chalk transition-colors group-hover:text-signal">
+          {event.name}
+        </h3>
+        <div className="mb-3.5 text-[0.82rem] text-muted uppercase">
+          {[event.venue, event.city].filter(Boolean).join(' · ') || 'Venue to be confirmed'}
+        </div>
+        <div className="mt-auto border-b border-line pb-3.5 text-[0.82rem] font-semibold text-chalk-dim">
+          {shortDate(event.eventDate)}
+        </div>
+        <span className="mt-3.5 rounded-xs bg-ink-600 px-2.5 py-2.5 text-center text-[0.72rem] font-bold tracking-[0.1em] text-muted uppercase">
+          {event.completedCount}/{event.boutCount} bouts recorded
+        </span>
+      </div>
+    </Link>
+  )
+}
+
+function ChampionCard({ row }: { row: RankingRow }) {
+  return (
+    <Link
+      to={`/fighters/${row.fighter.slug}`}
+      className="lift group block rounded-md border border-line bg-ink-900 px-7 py-8 text-center"
+    >
+      <div className="font-semibold tracking-[0.06em] text-signal">{record(row.fighter)}</div>
+      <div className="my-2 text-[0.8rem] tracking-[0.15em] text-muted uppercase">
+        {row.fighter.divisionName ?? 'Unassigned'}
+        {row.isInterimChampion ? ' · Interim champion' : ' champion'}
+      </div>
+      <h3 className="text-[1.9rem] text-chalk transition-colors group-hover:text-signal">
+        {flagOf(row.fighter.countryCode)} {row.fighter.displayName}
+      </h3>
+      <div className="mt-2 flex items-center justify-center gap-1.5 text-[0.85rem] text-muted">
+        <Crown className="size-3.5 text-signal" />
+        {row.fighter.disciplineCode} · rating {Math.round(row.rating)}
+      </div>
+    </Link>
+  )
+}
+
+function ScheduleRow({ event }: { event: EventCard }) {
+  const ended = event.status === 'completed'
+  return (
+    <Link
+      to={`/events/${event.slug}`}
+      className="grid items-center gap-4.5 rounded-md border border-line bg-ink-800 px-6 py-4.5 transition-colors hover:border-signal sm:grid-cols-[120px_1fr_1fr_auto]"
+    >
+      <span
+        className={
+          'rounded-xs px-2.5 py-1.5 text-center text-[0.68rem] font-bold tracking-[0.1em] uppercase ' +
+          (ended ? 'bg-ink-600 text-muted' : 'bg-signal text-white')
+        }
+      >
+        {ended ? 'Ended' : 'Scheduled'}
+      </span>
+      <div>
+        <span className="block text-[0.68rem] font-bold tracking-[0.15em] text-signal uppercase">
+          {event.disciplineCodes.join(' · ') || 'Event'}
+        </span>
+        <h4 className="text-[1.25rem] text-chalk">{event.name}</h4>
+      </div>
+      <div className="text-[0.85rem] text-muted">
+        {[event.venue, event.city].filter(Boolean).join(', ') || '—'}
+      </div>
+      <div className="text-[0.9rem] font-semibold whitespace-nowrap text-chalk-dim">
+        {shortDate(event.eventDate)}
+      </div>
+    </Link>
   )
 }
 
@@ -348,29 +518,26 @@ function MethodologyStrip() {
   ]
 
   return (
-    <section className="border-t border-line bg-ink-850">
-      <Container className="py-14 sm:py-20">
-        <SectionHeader
-          eyebrow="No opinion. No votes. No promotion."
-          title="How a position is earned"
-          action={
-            <Link to="/methodology">
-              <Button variant="secondary" size="sm" icon={<TrendingUp className="size-3.5" />}>
-                Full methodology
-              </Button>
-            </Link>
-          }
-        />
+    <section className="border-t border-line bg-ink-800 py-[70px]">
+      <div className={WRAP}>
+        <SectionHead eyebrow="No opinion. No votes. No promotion." title="How a position is earned" />
         <div className="grid gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((step) => (
-            <div key={step.n} className="bg-ink-850 p-5">
+            <div key={step.n} className="bg-ink-800 p-6">
               <div className="numeral text-3xl text-signal">{step.n}</div>
-              <h3 className="mt-3 text-lg text-chalk">{step.title}</h3>
+              <h3 className="mt-3 text-xl text-chalk">{step.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">{step.body}</p>
             </div>
           ))}
         </div>
-      </Container>
+        <div className="mt-9 text-center">
+          <Link to="/methodology">
+            <Button variant="secondary" size="lg" icon={<TrendingUp className="size-4" />}>
+              Full methodology
+            </Button>
+          </Link>
+        </div>
+      </div>
     </section>
   )
 }
