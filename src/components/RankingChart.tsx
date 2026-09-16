@@ -29,9 +29,14 @@ interface Point {
   isChampion: boolean
 }
 
-const LINE = '#FFB525'
-const GRID = '#1B1B22'
-const AXIS = '#55555F'
+// Recharts writes these straight onto SVG attributes, where `var(--token)`
+// is not resolved — so the palette is mirrored here by hand. Keep in step
+// with `--color-signal` / `--color-line-soft` / `--color-faint`.
+const LINE = '#D7272A'
+const GRID = '#171717'
+const AXIS = '#6F6F6F'
+const SURFACE = '#0A0A0A'
+const CURSOR = '#2A2A2A'
 
 export function RankingChart({
   history,
@@ -92,7 +97,7 @@ export function RankingChart({
             tickFormatter={(value: number) => (value === 0 ? 'C' : `#${value}`)}
           />
           <Tooltip
-            cursor={{ stroke: '#3A3A44', strokeWidth: 1 }}
+            cursor={{ stroke: CURSOR, strokeWidth: 1 }}
             content={<RankTooltip />}
             wrapperStyle={{ outline: 'none' }}
           />
@@ -101,8 +106,8 @@ export function RankingChart({
             dataKey="rank"
             stroke={LINE}
             strokeWidth={2}
-            dot={{ r: 3, fill: '#0B0B0E', stroke: LINE, strokeWidth: 2 }}
-            activeDot={{ r: 5, fill: LINE, stroke: '#0B0B0E', strokeWidth: 2 }}
+            dot={{ r: 3, fill: SURFACE, stroke: LINE, strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: LINE, stroke: SURFACE, strokeWidth: 2 }}
             isAnimationActive={false}
           />
         </LineChart>
@@ -158,7 +163,7 @@ export function RatingSparkline({
         <LineChart data={points} margin={{ top: 4, right: 2, bottom: 0, left: 2 }}>
           <YAxis hide domain={['dataMin - 20', 'dataMax + 20']} />
           <Tooltip
-            cursor={{ stroke: '#3A3A44', strokeWidth: 1 }}
+            cursor={{ stroke: CURSOR, strokeWidth: 1 }}
             content={<RatingTooltip />}
             wrapperStyle={{ outline: 'none' }}
           />
