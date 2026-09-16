@@ -195,7 +195,10 @@ export function AdminLayout() {
           />
         ) : null}
 
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        {/* `admin-surface` re-points the palette tokens to their light
+            values for everything inside — the top bar and sidebar above are
+            outside it and stay black. */}
+        <main className="admin-surface min-w-0 flex-1 bg-ink-900 px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>
