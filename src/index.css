@@ -6,31 +6,46 @@
    ========================================================================== */
 
 @theme {
-  --color-ink-900: #08080a;
-  --color-ink-850: #0b0b0e;
-  --color-ink-800: #101014;
-  --color-ink-700: #16161b;
-  --color-ink-600: #1d1d24;
-  --color-ink-500: #272730;
-  --color-line: #24242c;
-  --color-line-soft: #1b1b22;
+  /* Warriors Dream Series palette. Every component in the app is written
+     against these semantic names rather than raw hex, so re-pointing them here
+     restyles the whole site — the token names keep their old meanings:
+       ink-*   the dark surfaces, darkest first
+       line    hairline borders
+       chalk   primary text · muted / faint the quieter grades
+       signal  the single accent (WDS red)                                  */
+  --color-ink-900: #050505; /* page background          (--bg)     */
+  --color-ink-850: #0a0a0a;
+  --color-ink-800: #0d0d0d; /* raised surface           (--bg-alt) */
+  --color-ink-700: #111111; /* card                     (--card)   */
+  --color-ink-600: #1a1a1a;
+  --color-ink-500: #2a2a2a;
+  --color-line: #1f1f1f; /* border                   (--border) */
+  --color-line-soft: #171717;
 
-  --color-chalk: #f5f5f7;
-  --color-chalk-dim: #b9b9c2;
-  --color-muted: #7b7b86;
-  --color-faint: #55555f;
+  /* The light header bar and the white offset card in the featured-event
+     showcase — the two places WDS goes light on a dark page. */
+  --color-bar: #e9e9ea;
+  --color-bar-line: #d6d6d6;
+  --color-bar-text: #111111;
 
-  --color-signal: #ffb525;
-  --color-signal-bright: #ffcb5c;
-  --color-signal-dim: #8a5f11;
-  --color-signal-wash: rgba(255, 181, 37, 0.12);
+  --color-chalk: #ffffff;
+  --color-chalk-dim: #dddddd;
+  --color-muted: #a8a8a8;
+  --color-faint: #6f6f6f;
 
+  --color-signal: #d7272a; /* WDS red        (--red)      */
+  --color-signal-bright: #f03a3d;
+  --color-signal-dim: #a8181b; /*                (--red-dark) */
+  --color-signal-wash: rgba(215, 39, 42, 0.12);
+
+  /* Movement stays green/red, but "fall" is lifted well clear of the brand
+     red so a dropping fighter never reads as an accent. */
   --color-rise: #34c17b;
-  --color-fall: #ef4e57;
-  --color-flat: #55555f;
+  --color-fall: #ff6b71;
+  --color-flat: #6f6f6f;
 
-  --font-display: 'Barlow Condensed', 'Oswald', 'Arial Narrow', system-ui, sans-serif;
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Teko', 'Oswald', 'Arial Narrow', system-ui, sans-serif;
+  --font-sans: 'Oswald', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   --radius-xs: 2px;
@@ -63,9 +78,11 @@
 
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    line-height: 1.02;
+    /* Teko carries less weight than Barlow Condensed at the same numeric
+       value, so headings sit at 600 with the half-pixel tracking WDS uses. */
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    line-height: 1.04;
     margin: 0;
     text-transform: uppercase;
   }
@@ -74,7 +91,7 @@
 
   ::selection {
     background: var(--color-signal);
-    color: #17130a;
+    color: #ffffff;
   }
 
   :focus-visible {
@@ -113,13 +130,23 @@
     letter-spacing: -0.01em;
   }
 
+  /* WDS eyebrows are red and widely tracked — they are the accent's main job
+     on the page, above every section heading. */
   .eyebrow {
-    font-family: var(--font-display);
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.22em;
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--color-muted);
+    color: var(--color-signal);
+  }
+
+  /* The accent is dark enough that near-black text on it fails contrast, so
+     anything sitting on a signal fill is white instead. Written as a compound
+     selector so the existing `bg-signal text-ink-900` pairs throughout the app
+     flip without touching a dozen component files. */
+  .bg-signal.text-ink-900 {
+    color: #ffffff;
   }
 
   .rule {
@@ -136,6 +163,48 @@
       linear-gradient(to right, var(--color-line-soft) 1px, transparent 1px),
       linear-gradient(to bottom, var(--color-line-soft) 1px, transparent 1px);
     background-size: 64px 64px;
+  }
+
+  /* Full-bleed looping video behind the hero, cropped the way
+     `background-size: cover` would crop an image. The 100vw / 56.25vw pair
+     keeps the 16:9 frame filling the box at any viewport shape — it is the one
+     piece of the WDS hero that CSS utilities cannot express. */
+  .hero-video {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .hero-video iframe {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100vw;
+    height: 56.25vw;
+    min-height: 100%;
+    min-width: 177.78vh;
+    transform: translate(-50%, -50%);
+    border: 0;
+    /* Keeps the frame black rather than browser-grey if the embed is blocked. */
+    background: #050505;
+  }
+  .hero-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+      linear-gradient(90deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.25) 55%, rgba(0, 0, 0, 0.6) 100%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.55));
+  }
+
+  /* The WDS card gesture: rise a little, take the accent border. */
+  .lift {
+    transition: transform 0.25s ease, border-color 0.25s ease;
+  }
+  .lift:hover {
+    transform: translateY(-6px);
+    border-color: var(--color-signal);
   }
 
   .accent-underline {
