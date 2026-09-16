@@ -198,6 +198,44 @@
       linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.55));
   }
 
+  /* ------------------------------------------------------------------
+     Light admin surface.
+
+     The admin content area is white while its top bar and sidebar stay
+     black. Rather than rewriting a dozen admin pages, this re-points the
+     same semantic tokens inside that one region: `bg-ink-800` still means
+     "a panel", it is simply a white panel here, and every page, table,
+     button and form follows without a single component change.
+     ------------------------------------------------------------------ */
+  .admin-surface {
+    --color-ink-900: #ffffff; /* the page itself   */
+    --color-ink-850: #f7f7f8; /* tinted card       */
+    --color-ink-800: #ffffff; /* panel             */
+    --color-ink-700: #f1f1f2; /* hover             */
+    --color-ink-600: #e6e6e8;
+    --color-ink-500: #d4d4d7;
+    --color-line: #e3e3e6;
+    --color-line-soft: #eeeef0;
+
+    --color-chalk: #111111; /* primary text      */
+    --color-chalk-dim: #3f3f45;
+    --color-muted: #6a6a72;
+    --color-faint: #9b9ba3;
+
+    /* Movement colours darkened for legibility on white. */
+    --color-rise: #12875a;
+    --color-fall: #c62f34;
+
+    color: var(--color-chalk);
+  }
+
+  /* A modal's backdrop has to stay dark even over a white page, or it
+     stops reading as a veil. Only ink-900 is put back — the dialog on top
+     keeps the light panel colours. */
+  .admin-surface .scrim {
+    --color-ink-900: #050505;
+  }
+
   /* The WDS card gesture: rise a little, take the accent border. */
   .lift {
     transition: transform 0.25s ease, border-color 0.25s ease;
