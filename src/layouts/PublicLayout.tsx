@@ -48,30 +48,35 @@ export function PublicLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-ink-900">
-      <a
+      
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[80] focus:bg-signal focus:px-4 focus:py-2 focus:text-ink-900"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[80] focus:bg-signal focus:px-4 focus:py-2 focus:text-white"
       >
         Skip to content
       </a>
 
-      <header className="sticky top-0 z-40 border-b border-line bg-ink-900/92 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-[1400px] items-center gap-4 px-4 sm:px-6">
+      {/* The one light surface on a black site: a tall pale bar with dark
+          uppercase links that take a red underline, and a red pill at the far
+          right. */}
+      <header className="sticky top-0 z-40 border-b border-bar-line bg-bar">
+        <div className="mx-auto flex h-[72px] w-full max-w-[1240px] items-center gap-6 px-4 sm:px-6 lg:h-[84px]">
           <Link to="/" className="shrink-0" aria-label="FIGHTRANK home">
-            <span className="numeral text-xl tracking-tight text-chalk sm:text-2xl">
+            <span className="numeral text-2xl tracking-tight text-bar-text sm:text-3xl">
               FIGHT<span className="text-signal">RANK</span>
             </span>
           </Link>
 
-          <nav className="hidden flex-1 items-center gap-1 lg:flex">
+          <nav className="hidden flex-1 items-center gap-7 lg:flex">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
                   cn(
-                    'px-3 py-2 font-display text-sm font-semibold uppercase tracking-[0.08em] transition-colors',
-                    isActive ? 'text-signal' : 'text-chalk-dim hover:text-chalk',
+                    'border-b-2 py-1.5 text-[0.92rem] font-semibold whitespace-nowrap uppercase tracking-[0.06em] transition-colors',
+                    isActive
+                      ? 'border-signal text-signal'
+                      : 'border-transparent text-bar-text hover:border-signal hover:text-signal',
                   )
                 }
               >
@@ -80,66 +85,52 @@ export function PublicLayout() {
             ))}
           </nav>
 
-          <div className="ml-auto flex items-center gap-1">
-            {/* The Fighter ID is the athlete-facing half of the platform, so it
-                gets its own pair of controls rather than a nav link. */}
-            <NavLink
-              to="/fighter-id"
-              className={({ isActive }) =>
-                cn(
-                  'hidden items-center gap-1.5 border px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-[0.1em] transition-colors sm:flex',
-                  isActive
-                    ? 'border-signal text-signal'
-                    : 'border-line text-chalk-dim hover:border-chalk-dim hover:text-chalk',
-                )
-              }
-            >
-              <IdCard className="size-3.5" />
-              Fighter ID
-            </NavLink>
-            <Link
-              to="/fighter-id/new"
-              className="hidden items-center gap-1.5 border border-signal bg-signal px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-[0.1em] text-ink-900 transition-colors hover:bg-signal/85 sm:flex"
-            >
-              Create ID
-            </Link>
-
+          <div className="ml-auto flex items-center gap-2">
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-2 border border-line px-2.5 py-1.5 text-sm text-muted transition-colors hover:border-chalk-dim hover:text-chalk"
+              className="flex items-center gap-2 rounded-xs border border-bar-line px-2.5 py-2 text-bar-text transition-colors hover:border-signal hover:text-signal"
               aria-label="Search"
             >
               <Search className="size-4" />
-              <span className="hidden text-xs xl:inline">Search</span>
-              <kbd className="hidden rounded-xs border border-line px-1 text-[0.65rem] text-faint xl:inline">
+              <kbd className="hidden rounded-xs border border-bar-line px-1 text-[0.65rem] text-[#777] xl:inline">
                 ⌘K
               </kbd>
             </button>
 
             <Link
               to={session ? '/admin' : '/admin/login'}
-              className="hidden items-center gap-2 border border-line px-2.5 py-1.5 text-sm text-muted transition-colors hover:border-signal hover:text-signal sm:flex"
+              className="hidden items-center gap-2 rounded-xs border border-bar-line px-2.5 py-2 text-bar-text transition-colors hover:border-signal hover:text-signal sm:flex"
+              aria-label={session ? 'Admin panel' : 'Sign in'}
             >
               <Shield className="size-4" />
-              <span className="hidden text-xs xl:inline">{session ? 'Admin' : 'Sign in'}</span>
+            </Link>
+
+            {/* The Fighter ID is the athlete-facing half of the platform, so it
+                takes the header's one call to action rather than a nav link. */}
+            <Link
+              to="/fighter-id"
+              className="hidden items-center gap-2 rounded-full bg-signal px-5 py-3 text-[0.82rem] font-bold uppercase tracking-[0.08em] whitespace-nowrap text-white transition-colors hover:bg-signal-dim sm:inline-flex"
+            >
+              <IdCard className="size-4 shrink-0" />
+              <span className="hidden md:inline">Fighter ID</span>
             </Link>
 
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
-              className="p-2 text-chalk-dim transition hover:text-chalk lg:hidden"
+              className="p-2 text-bar-text transition hover:text-signal lg:hidden"
               aria-label="Menu"
               aria-expanded={menuOpen}
             >
-              {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+              {menuOpen ? <X className="size-6" /> : <Menu className="size-6" />}
             </button>
           </div>
         </div>
 
         {menuOpen ? (
-          <div className="animate-fade border-t border-line bg-ink-850 lg:hidden">
-            <nav className="mx-auto flex max-w-[1400px] flex-col px-4 py-2 sm:px-6">
+          <div className="animate-fade border-t border-bar-line bg-bar lg:hidden">
+            <nav className="mx-auto flex max-w-[1240px] flex-col px-4 py-2 sm:px-6">
               {[
                 ...NAV,
                 { to: '/fighter-id', label: 'Fighter ID', icon: IdCard },
@@ -156,8 +147,8 @@ export function PublicLayout() {
                     onClick={() => setMenuOpen(false)}
                     className={({ isActive }) =>
                       cn(
-                        'flex items-center gap-3 border-b border-line-soft py-3 font-display text-base font-semibold uppercase tracking-wide last:border-b-0',
-                        isActive ? 'text-signal' : 'text-chalk-dim',
+                        'flex items-center gap-3 border-b border-bar-line py-3.5 text-[0.92rem] font-semibold uppercase tracking-[0.06em]',
+                        isActive ? 'text-signal' : 'text-bar-text',
                       )
                     }
                   >
@@ -169,7 +160,7 @@ export function PublicLayout() {
               <Link
                 to={session ? '/admin' : '/admin/login'}
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 border-t border-line py-3 font-display text-base font-semibold uppercase tracking-wide text-muted"
+                className="flex items-center gap-3 py-3.5 text-[0.92rem] font-semibold uppercase tracking-[0.06em] text-[#666]"
               >
                 <Shield className="size-4" />
                 {session ? 'Admin panel' : 'Administrator sign in'}
@@ -213,46 +204,93 @@ export function PublicLayout() {
   )
 }
 
+/** Edit these to point at your own accounts — an empty string hides the link. */
+const SOCIAL = [
+  { label: 'IG', href: '', name: 'Instagram' },
+  { label: 'FB', href: '', name: 'Facebook' },
+  { label: 'IN', href: '', name: 'LinkedIn' },
+  { label: 'YT', href: '', name: 'YouTube' },
+]
+
+const CONTACT = ['support@fightrank.com', 'press@fightrank.com']
+
 function Footer({ mode }: { mode: 'supabase' | 'local' }) {
   return (
-    <footer className="border-t border-line bg-ink-850">
-      <div className="mx-auto grid w-full max-w-[1400px] gap-8 px-4 py-10 sm:px-6 md:grid-cols-[2fr_1fr_1fr]">
-        <div>
-          <div className="numeral text-2xl text-chalk">
-            FIGHT<span className="text-signal">RANK</span>
+    <footer className="mt-16 border-t border-line pt-14 pb-8">
+      <div className="mx-auto w-full max-w-[1240px] px-4 sm:px-6">
+        <div className="mb-10 grid gap-10 md:grid-cols-[1.3fr_1fr_1.2fr]">
+          <div>
+            <div className="numeral text-3xl text-chalk">
+              FIGHT<span className="text-signal">RANK</span>
+            </div>
+            <p className="mt-4 max-w-[320px] text-sm leading-relaxed text-muted">
+              Every fight changes the ranking. Positions are produced by a published algorithm from
+              recorded results — never by opinion, popularity or promotion.
+            </p>
+            <div className="mt-4 flex gap-3.5">
+              {SOCIAL.filter((s) => s.href).map((social) => (
+                
+                  key={social.label}
+                  href={social.href}
+                  aria-label={social.name}
+                  className="flex size-[38px] items-center justify-center rounded-full border border-line text-xs text-muted transition-colors hover:border-signal hover:text-signal"
+                >
+                  {social.label}
+                </a>
+              ))}
+            </div>
           </div>
-          <p className="mt-2 max-w-sm text-sm text-muted">
-            Every fight changes the ranking. Positions are produced by a published algorithm from
-            recorded results — never by opinion, popularity or promotion.
-          </p>
-          <p className="mt-4 max-w-sm text-xs leading-relaxed text-faint">
-            FIGHTRANK is an independent ranking platform and is not affiliated with, endorsed by or
-            connected to any real promotion. The fighters, events and results shown in this
-            installation are <strong className="text-muted">fictional demonstration data</strong>.
-          </p>
+
+          <div>
+            <h4 className="mb-4 text-base tracking-[0.06em] text-muted">Navigate</h4>
+            <ul className="flex flex-col gap-2.5 text-sm">
+              {[
+                ['/disciplines', 'Disciplines'],
+                ['/rankings', 'Rankings'],
+                ['/p4p', 'Pound for pound'],
+                ['/events', 'Events'],
+                ['/results', 'Results'],
+                ['/fighter-id', 'Fighter ID'],
+                ['/about', 'About us'],
+                ['/partners', 'Partners'],
+              ].map(([to, label]) => (
+                <li key={to}>
+                  <Link to={to} className="text-muted transition hover:text-signal">
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="mb-4 text-base tracking-[0.06em] text-muted">Get in touch</h4>
+            <ul className="flex flex-col gap-2.5 text-sm text-muted">
+              {CONTACT.map((email) => (
+                <li key={email}>{email}</li>
+              ))}
+              <li>
+                <Link to="/methodology" className="transition hover:text-signal">
+                  How the ranking works
+                </Link>
+              </li>
+              <li>
+                <Link to="/admin" className="transition hover:text-signal">
+                  Administration
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
-        <nav className="flex flex-col gap-2 text-sm">
-          <span className="eyebrow mb-1">Rankings</span>
-          <Link to="/disciplines" className="text-muted transition hover:text-chalk">Disciplines</Link>
-          <Link to="/rankings" className="text-muted transition hover:text-chalk">All divisions</Link>
-          <Link to="/p4p" className="text-muted transition hover:text-chalk">Pound for pound</Link>
-          <Link to="/movers" className="text-muted transition hover:text-chalk">Biggest movers</Link>
-          <Link to="/compare" className="text-muted transition hover:text-chalk">Compare fighters</Link>
-        </nav>
-        <nav className="flex flex-col gap-2 text-sm">
-          <span className="eyebrow mb-1">The system</span>
-          <Link to="/methodology" className="text-muted transition hover:text-chalk">How ranking works</Link>
-          <Link to="/results" className="text-muted transition hover:text-chalk">All results</Link>
-          <Link to="/events" className="text-muted transition hover:text-chalk">Events</Link>
-          <Link to="/fighter-id" className="text-muted transition hover:text-chalk">Fighter ID lookup</Link>
-          <Link to="/fighter-id/new" className="text-muted transition hover:text-chalk">Create a Fighter ID</Link>
-          <Link to="/about" className="text-muted transition hover:text-chalk">About FIGHTRANK</Link>
-          <Link to="/partners" className="text-muted transition hover:text-chalk">Partners</Link>
-          <Link to="/admin" className="text-muted transition hover:text-chalk">Administration</Link>
+
+        <div className="flex flex-wrap justify-between gap-2.5 border-t border-line pt-6 text-[0.82rem] text-muted">
+          <span>
+            {new Date().getFullYear()} &copy; FIGHTRANK &ndash; All Rights Reserved
+          </span>
           <span className="text-faint">
             {mode === 'supabase' ? 'Supabase PostgreSQL' : 'Local PostgreSQL (demo)'}
           </span>
-        </nav>
+        </div>
       </div>
     </footer>
   )
