@@ -1,5 +1,5 @@
 -- =============================================================================
--- FIGHTRANK — 0006_fighter_identity.sql
+-- FIGHTRANK - 0006_fighter_identity.sql
 -- The Fighter ID, and how someone asks for one.
 --
 -- Two things live here:
