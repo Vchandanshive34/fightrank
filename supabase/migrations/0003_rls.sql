@@ -1,6 +1,6 @@
 -- =============================================================================
--- FIGHTRANK — 0003_rls.sql
--- Row Level Security (§25).
+-- FIGHTRANK - 0003_rls.sql
+-- Row Level Security (Section 25).
 --   anon / authenticated : READ competitive data
 --   admin / editor       : full write access
 -- The service-role key is never used in the browser.
