@@ -1,5 +1,5 @@
 -- =============================================================================
--- FIGHTRANK — 0002_functions.sql
+-- FIGHTRANK - 0002_functions.sql
 -- Triggers, helper functions and the new-user hook.
 -- =============================================================================
 
@@ -91,7 +91,7 @@ $$;
 
 -- Ranking-integrity guard ------------------------------------------------------
 -- Belt-and-braces on top of the CHECK constraints: both fighters must belong to
--- a division compatible with the bout's division (§23).
+-- a division compatible with the bout's division (Section 23).
 create or replace function public.validate_fight()
 returns trigger
 language plpgsql
@@ -114,7 +114,7 @@ begin
     raise exception 'The bout discipline does not match the division''s discipline';
   end if;
 
-  -- Both athletes must be registered in this discipline (§23).
+  -- Both athletes must be registered in this discipline (Section 23).
   select division_id into a_div from public.fighter_disciplines
     where fighter_id = new.fighter_a_id and discipline_id = new.discipline_id;
   select division_id into b_div from public.fighter_disciplines
@@ -122,7 +122,7 @@ begin
 
   if a_div is null and b_div is null then
     raise exception
-      'Neither athlete is registered in this discipline — add the discipline to their Fighter ID first';
+      'Neither athlete is registered in this discipline - add the discipline to their Fighter ID first';
   end if;
 
   if not is_catchweight then
