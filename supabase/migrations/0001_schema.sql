@@ -1,5 +1,5 @@
 -- =============================================================================
--- FIGHTRANK — 0001_schema.sql
+-- FIGHTRANK - 0001_schema.sql
 -- Core relational schema. Normalised: competitive facts (fights) are the single
 -- source of truth; everything else (records, ratings, rankings) is DERIVED and
 -- rebuilt by the ranking engine. Nothing here is hand-entered ranking data.
@@ -16,7 +16,7 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
--- profiles — application users. Mirrors auth.users (Supabase Auth).
+-- profiles - application users. Mirrors auth.users (Supabase Auth).
 -- -----------------------------------------------------------------------------
 create table if not exists public.profiles (
   id            uuid primary key references auth.users (id) on delete cascade,
@@ -31,7 +31,7 @@ create table if not exists public.profiles (
 create index if not exists profiles_role_idx on public.profiles (role);
 
 -- -----------------------------------------------------------------------------
--- disciplines — the combat sports the platform ranks.
+-- disciplines - the combat sports the platform ranks.
 --
 -- A discipline is a self-contained competitive world: its own weight classes,
 -- its own ratings, its own champions. A grappling result never moves an MMA
@@ -56,7 +56,7 @@ create index if not exists disciplines_sort_idx on public.disciplines (sort_orde
 create unique index if not exists disciplines_code_idx on public.disciplines (lower(short_code));
 
 -- -----------------------------------------------------------------------------
--- divisions — weight classes, each belonging to exactly one discipline (§3).
+-- divisions - weight classes, each belonging to exactly one discipline (Section 3).
 -- NOT hard-coded in the UI.
 -- -----------------------------------------------------------------------------
 create table if not exists public.divisions (
@@ -85,7 +85,7 @@ create unique index if not exists divisions_single_p4p_idx
   on public.divisions (discipline_id) where is_p4p;
 
 -- -----------------------------------------------------------------------------
--- fighters — ONE ROW PER ATHLETE, for their whole career.
+-- fighters - ONE ROW PER ATHLETE, for their whole career.
 --
 -- This is the Fighter ID: a single identity that follows an athlete across
 -- every discipline they compete in. `fighter_code` is the public-facing form
@@ -136,14 +136,14 @@ create index if not exists fighters_score_idx on public.fighters (division_id, r
 create index if not exists fighters_active_idx on public.fighters (is_active);
 create index if not exists fighters_name_idx on public.fighters (lower(display_name));
 create index if not exists fighters_discipline_idx on public.fighters (primary_discipline_id);
--- Champion uniqueness is enforced per division (§23).
+-- Champion uniqueness is enforced per division (Section 23).
 create unique index if not exists fighters_one_champion_per_division
   on public.fighters (division_id) where is_champion;
 create unique index if not exists fighters_one_interim_per_division
   on public.fighters (division_id) where is_interim_champion;
 
 -- -----------------------------------------------------------------------------
--- fighter_disciplines — which athlete competes in which discipline.
+-- fighter_disciplines - which athlete competes in which discipline.
 --
 -- This is what the unified Fighter ID buys: one athlete, several competitive
 -- records, none of which contaminate the others. An athlete ranked #3 at
@@ -180,14 +180,14 @@ create index if not exists fighter_disciplines_division_idx
 -- An athlete has exactly one primary discipline.
 create unique index if not exists fighter_disciplines_one_primary
   on public.fighter_disciplines (fighter_id) where is_primary;
--- Championship uniqueness, per division (§23).
+-- Championship uniqueness, per division (Section 23).
 create unique index if not exists fighter_disciplines_one_champion
   on public.fighter_disciplines (division_id) where is_champion;
 create unique index if not exists fighter_disciplines_one_interim
   on public.fighter_disciplines (division_id) where is_interim_champion;
 
 -- -----------------------------------------------------------------------------
--- fighter_stats — derived record, PER DISCIPLINE. Rebuilt by the engine.
+-- fighter_stats - derived record, PER DISCIPLINE. Rebuilt by the engine.
 -- -----------------------------------------------------------------------------
 create table if not exists public.fighter_stats (
   fighter_id       uuid not null references public.fighters (id) on delete cascade,
@@ -224,7 +224,7 @@ create index if not exists fighter_stats_discipline_idx
   on public.fighter_stats (discipline_id);
 
 -- -----------------------------------------------------------------------------
--- events — fight cards.
+-- events - fight cards.
 -- -----------------------------------------------------------------------------
 create table if not exists public.events (
   id           uuid primary key default gen_random_uuid(),
@@ -250,7 +250,7 @@ create unique index if not exists events_number_idx on public.events (event_numb
   where event_number is not null;
 
 -- -----------------------------------------------------------------------------
--- fights — the single source of competitive truth.
+-- fights - the single source of competitive truth.
 -- -----------------------------------------------------------------------------
 create table if not exists public.fights (
   id               uuid primary key default gen_random_uuid(),
@@ -287,7 +287,7 @@ create table if not exists public.fights (
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now(),
 
-  -- §23 Ranking calculation safety, enforced in the database itself.
+  -- Section 23 Ranking calculation safety, enforced in the database itself.
   constraint fights_distinct_fighters
     check (fighter_a_id <> fighter_b_id),
   constraint fights_winner_is_participant
@@ -316,12 +316,12 @@ create index if not exists fights_a_idx on public.fights (fighter_a_id);
 create index if not exists fights_b_idx on public.fights (fighter_b_id);
 create index if not exists fights_winner_idx on public.fights (winner_id);
 create index if not exists fights_status_idx on public.fights (status);
--- Duplicate-bout prevention, order-independent (§23).
+-- Duplicate-bout prevention, order-independent (Section 23).
 create unique index if not exists fights_unique_bout_per_event
   on public.fights (event_id, least(fighter_a_id, fighter_b_id), greatest(fighter_a_id, fighter_b_id));
 
 -- -----------------------------------------------------------------------------
--- rankings — current divisional standings. Champion = position 0.
+-- rankings - current divisional standings. Champion = position 0.
 -- -----------------------------------------------------------------------------
 create table if not exists public.rankings (
   id             uuid primary key default gen_random_uuid(),
@@ -346,7 +346,7 @@ create index if not exists rankings_fighter_idx on public.rankings (fighter_id);
 create index if not exists rankings_discipline_idx on public.rankings (discipline_id, position);
 
 -- -----------------------------------------------------------------------------
--- ranking_breakdowns — transparent score decomposition (§42).
+-- ranking_breakdowns - transparent score decomposition (Section 42).
 -- -----------------------------------------------------------------------------
 create table if not exists public.ranking_breakdowns (
   id               uuid primary key default gen_random_uuid(),
@@ -367,7 +367,7 @@ create table if not exists public.ranking_breakdowns (
 );
 
 -- -----------------------------------------------------------------------------
--- ranking_history — every movement, ever (§19).
+-- ranking_history - every movement, ever (Section 19).
 -- -----------------------------------------------------------------------------
 create table if not exists public.ranking_history (
   id               uuid primary key default gen_random_uuid(),
@@ -399,7 +399,7 @@ create index if not exists ranking_history_movement_idx
   on public.ranking_history (effective_date desc, movement desc);
 
 -- -----------------------------------------------------------------------------
--- p4p_rankings / p4p_history — separate scoring model (§20).
+-- p4p_rankings / p4p_history - separate scoring model (Section 20).
 -- -----------------------------------------------------------------------------
 create table if not exists public.p4p_rankings (
   id                uuid primary key default gen_random_uuid(),
@@ -436,7 +436,7 @@ create table if not exists public.p4p_history (
 create index if not exists p4p_history_fighter_idx on public.p4p_history (fighter_id, effective_date);
 
 -- -----------------------------------------------------------------------------
--- championships — title reigns, including interim (§15).
+-- championships - title reigns, including interim (Section 15).
 -- -----------------------------------------------------------------------------
 create table if not exists public.championships (
   id            uuid primary key default gen_random_uuid(),
@@ -460,14 +460,14 @@ create index if not exists championships_division_idx on public.championships (d
 create index if not exists championships_fighter_idx on public.championships (fighter_id);
 create index if not exists championships_discipline_idx
   on public.championships (discipline_id, is_current);
--- One current undisputed + one current interim champion per division (§23).
+-- One current undisputed + one current interim champion per division (Section 23).
 create unique index if not exists championships_one_current_undisputed
   on public.championships (division_id) where is_current and kind = 'undisputed';
 create unique index if not exists championships_one_current_interim
   on public.championships (division_id) where is_current and kind = 'interim';
 
 -- -----------------------------------------------------------------------------
--- ranking_config — every engine constant, editable without code changes (§40).
+-- ranking_config - every engine constant, editable without code changes (Section 40).
 -- A registry table: the admin UI renders it generically from these rows.
 -- -----------------------------------------------------------------------------
 create table if not exists public.ranking_config (
@@ -493,7 +493,7 @@ create table if not exists public.ranking_config (
 create index if not exists ranking_config_scope_idx on public.ranking_config (scope, sort_order);
 
 -- -----------------------------------------------------------------------------
--- audit_log — every administrative action (§39).
+-- audit_log - every administrative action (Section 39).
 -- -----------------------------------------------------------------------------
 create table if not exists public.audit_log (
   id             uuid primary key default gen_random_uuid(),
@@ -514,10 +514,10 @@ create index if not exists audit_log_entity_idx on public.audit_log (entity, ent
 -- -----------------------------------------------------------------------------
 -- Read models.
 --
--- `fighter_profiles`  — one row per ATHLETE, carrying their primary
+-- `fighter_profiles`  - one row per ATHLETE, carrying their primary
 --                       discipline's record and standing. Roster, search, lists.
 -- `fighter_discipline_profiles`
---                     — one row per (athlete, discipline). This is what the
+--                     - one row per (athlete, discipline). This is what the
 --                       fighter profile page reads to show every record an
 --                       athlete holds under their single Fighter ID.
 -- -----------------------------------------------------------------------------
