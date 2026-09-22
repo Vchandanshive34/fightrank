@@ -1,11 +1,11 @@
 -- =============================================================================
--- FIGHTRANK — seed.sql
+-- FIGHTRANK - seed.sql
 --
 -- STRUCTURE ONLY. The fictional demonstration roster has been removed: there
 -- are no athletes, no events and no bouts in this file.
 --
 -- What remains is the competitive structure the platform needs to exist at
--- all — the five disciplines and their weight classes. Everything else is
+-- all - the five disciplines and their weight classes. Everything else is
 -- entered through the admin panel, and every Fighter ID is issued by the
 -- database as each athlete is added.
 --
@@ -19,11 +19,11 @@
 insert into public.disciplines
   (id, slug, name, short_code, tagline, description, ruleset, accent, sort_order, is_active)
 values
-  ('3ce28679-0a04-4c31-9649-a4a4d9e502d8', 'mixed-martial-arts', 'Mixed Martial Arts', 'MMA', 'Every range, every finish.', 'Striking and grappling under one ruleset. Bouts are contested over three rounds, or five when a title or a main event is on the line.', 'Unified rules · 5-minute rounds · open scoring disabled', '#e2574c', 1, true),
-  ('943518ba-0993-4458-8b67-e5b1ec5bbb64', 'submission-grappling', 'Submission Grappling', 'GRP', 'No strikes. No gi. No stalling.', 'Submission-only and points grappling contested in a single period. A match that reaches the buzzer is decided on advantages and control time.', 'No-gi · single 10-minute period · submission or referee decision', '#3f8ea8', 2, true),
-  ('72d24897-997a-4bf6-aae5-16260d470315', 'wrestling', 'Wrestling', 'WRE', 'Six minutes. Two feet. One decision.', 'Freestyle wrestling scored on takedowns, exposure and control. A ten-point lead ends the bout by technical fall; both shoulders on the mat ends it by pin.', 'Freestyle · single 6-minute period · pin, technical fall or points', '#c9922f', 3, true),
-  ('d09ba047-e100-4538-9383-62914c589b72', 'muay-thai', 'Muay Thai', 'MT', 'The art of eight limbs.', 'Full Thai rules: elbows, knees and the clinch, over five three-minute rounds scored on damage and dominance rather than volume.', 'Full Thai rules · five 3-minute rounds · clinch and elbows permitted', '#a8563f', 4, true),
-  ('ec4427f4-a644-411c-bc0f-224b632c17fd', 'kickboxing', 'Kickboxing', 'KB', 'Hands, shins, and no place to hide.', 'Three-round kickboxing on international rules: kicks above the waist, no clinch work, and an extra round if the judges cannot separate them.', 'K-1 rules · three 3-minute rounds · limited clinch', '#5f6f9c', 5, true)
+  ('3ce28679-0a04-4c31-9649-a4a4d9e502d8', 'mixed-martial-arts', 'Mixed Martial Arts', 'MMA', 'Every range, every finish.', 'Striking and grappling under one ruleset. Bouts are contested over three rounds, or five when a title or a main event is on the line.', 'Unified rules - 5-minute rounds - open scoring disabled', '#e2574c', 1, true),
+  ('943518ba-0993-4458-8b67-e5b1ec5bbb64', 'submission-grappling', 'Submission Grappling', 'GRP', 'No strikes. No gi. No stalling.', 'Submission-only and points grappling contested in a single period. A match that reaches the buzzer is decided on advantages and control time.', 'No-gi - single 10-minute period - submission or referee decision', '#3f8ea8', 2, true),
+  ('72d24897-997a-4bf6-aae5-16260d470315', 'wrestling', 'Wrestling', 'WRE', 'Six minutes. Two feet. One decision.', 'Freestyle wrestling scored on takedowns, exposure and control. A ten-point lead ends the bout by technical fall; both shoulders on the mat ends it by pin.', 'Freestyle - single 6-minute period - pin, technical fall or points', '#c9922f', 3, true),
+  ('d09ba047-e100-4538-9383-62914c589b72', 'muay-thai', 'Muay Thai', 'MT', 'The art of eight limbs.', 'Full Thai rules: elbows, knees and the clinch, over five three-minute rounds scored on damage and dominance rather than volume.', 'Full Thai rules - five 3-minute rounds - clinch and elbows permitted', '#a8563f', 4, true),
+  ('ec4427f4-a644-411c-bc0f-224b632c17fd', 'kickboxing', 'Kickboxing', 'KB', 'Hands, shins, and no place to hide.', 'Three-round kickboxing on international rules: kicks above the waist, no clinch work, and an extra round if the judges cannot separate them.', 'K-1 rules - three 3-minute rounds - limited clinch', '#5f6f9c', 5, true)
 on conflict (slug) do nothing;
 
 insert into public.divisions
