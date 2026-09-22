@@ -75,4 +75,7 @@ on conflict (slug) do nothing;
 -- One row per athlete. This is the Fighter ID.
 
 -- No athletes are seeded, so the Fighter ID sequence starts clean at FR-00001.
-select public.align_fighter_code_seq();
+-- (The original seed ended by calling public.align_fighter_code_seq(), which is
+--  defined in migration 0006. That call is removed here so this file runs on its
+--  own; step-06 aligns the sequence itself when you run it, and step-08 issues
+--  its own Fighter IDs either way.)
