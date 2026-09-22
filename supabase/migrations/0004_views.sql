@@ -1,7 +1,7 @@
 -- =============================================================================
--- FIGHTRANK — 0004_views.sql
+-- FIGHTRANK - 0004_views.sql
 -- Read models. All joins live here in SQL so the client only ever issues flat
--- selects — which is what lets one repository implementation serve both
+-- selects - which is what lets one repository implementation serve both
 -- Supabase (PostgREST) and the local PGlite demo database.
 -- =============================================================================
 
@@ -162,7 +162,7 @@ select
     order by fi.is_main_event desc, fi.bout_order asc
     limit 1) as main_event_division_id,
   -- Which disciplines appear on this card, for the card badges.
-  (select string_agg(distinct disc.short_code, ' · ' order by disc.short_code)
+  (select string_agg(distinct disc.short_code, ' - ' order by disc.short_code)
      from public.fights fi
      join public.disciplines disc on disc.id = fi.discipline_id
     where fi.event_id = e.id) as discipline_codes
@@ -190,7 +190,7 @@ select
   e.id,
   e.slug,
   e.name,
-  to_char(e.event_date, 'DD Mon YYYY') || coalesce(' · ' || e.city, ''),
+  to_char(e.event_date, 'DD Mon YYYY') || coalesce(' - ' || e.city, ''),
   e.poster_url,
   e.country_code,
   lower(coalesce(e.name, '') || ' ' || coalesce(e.venue, '') || ' ' ||
@@ -202,8 +202,8 @@ select
   d.id,
   d.slug,
   d.name,
-  disc.name || ' · ' || initcap(d.gender) ||
-    coalesce(' · ' || d.weight_lbs::text || ' lb', ''),
+  disc.name || ' - ' || initcap(d.gender) ||
+    coalesce(' - ' || d.weight_lbs::text || ' lb', ''),
   null,
   null,
   lower(coalesce(d.name, '') || ' ' || coalesce(d.gender, '') || ' ' ||
