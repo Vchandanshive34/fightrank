@@ -107,19 +107,29 @@ To run against Supabase instead, see [§5](#5-supabase-setup).
 > Everything below is configurable from `/admin/ranking-settings`. The numbers quoted are
 > the shipped defaults.
 
-### 3.1 Two layers
+### 3.1 The ranking score
 
-The engine is explicit about the difference between *what you have done* and *where you
-are now*, and shows both:
+Every divisional table is ordered by one published formula:
 
-| Layer | What it is | Where it appears |
-|---|---|---|
-| **Career rating** | Cumulative Elo across every rated bout: result, opponent strength, method, title status. Slow-moving, historical. | `fighters.rating`, the "Rating" column, "Base rating" in the breakdown |
-| **Ranking score** | Career rating **plus** current-state modifiers computed over a recency window: opponent quality, recent form, streak, finish rate, activity, championship status. | `rankings.score`, the order of the table, the full breakdown panel |
+```
+Score = (Win% × 0.7 + Recent Form × 0.3) × √(total fights)
+```
 
-The table is ordered by the ranking score. The breakdown panel on every fighter profile
-shows the components, and they always sum exactly to the final score — there is a test
-that asserts it.
+| Term | What it is |
+|---|---|
+| **Win %** | Career wins ÷ rated bouts × 100. A draw counts as half a win (configurable); a no contest is ignored. |
+| **Recent Form** | The last 5 bouts, win = 1 · draw = ½ · loss = 0, recency-weighted (540-day half-life), × 100. |
+| **√(total fights)** | Experience factor over rated bouts. Rewards a proven record with diminishing returns. |
+
+Example — a 9-1 fighter whose recent form is 80%: `(90 × 0.7 + 80 × 0.3) × √10 = 87 × 3.162 ≈ 275.1`.
+
+Both weights are admin-editable (`scoreWeightWinPct`, `scoreWeightRecentForm`). The
+implementation is `src/ranking/score.ts`; the fighter profile's breakdown panel and
+"Why this ranking?" list work the formula through with that fighter's own numbers.
+
+**Elo is still tracked** (sections 3.2–3.4). It no longer decides the order, but it is the
+first tie-breaker when two scores are equal, drives the rating chart, feeds pound-for-pound,
+and records how much each individual result mattered.
 
 ### 3.2 The rating pass
 
@@ -179,16 +189,12 @@ values only ever add.
 | DQ / doctor stoppage / retirement | +4 |
 | Title-fight win (additional) | +15 |
 
-### 3.5 The ranking-score modifiers
+### 3.5 Retired modifiers
 
-| Component | How it is computed | Range |
-|---|---|---|
-| **Opponent quality** | Average opponent-quality multiplier over the last 5 bouts, distance from 1.0 × 30 | ≈ −5 … +30 |
-| **Recent form** | Recency-weighted win rate over the last 5 bouts (540-day half-life), mapped to ±24 | −24 … +24 |
-| **Win streak** | 6 points per win from the 2nd consecutive win, **capped at 30** so a run against weak opposition can never outweigh opponent quality | −25 … +30 |
-| **Finish rate** | Share of the last 5 wins that ended inside the distance × 20 | 0 … +20 |
-| **Activity** | Tiered decay: ≤120 days +5 · ≤180 days 0 · ≤365 days −15 · ≤540 days −35 · beyond −70 | −70 … +5 |
-| **Championship** | Title-status modifier, 0 by default because champions are displayed above the contenders | 0 … |
+Earlier versions added streak, finish-rate, inactivity-decay and title bonuses on top of the
+Elo rating. Those are no longer part of the score; migration `0007_ranking_score.sql`
+removes their settings. Streaks, finish rate and activity are still shown on profiles as
+information.
 
 ### 3.6 Championships (§14, §15)
 
@@ -236,7 +242,7 @@ Rating +41 → 1657
 
 Fighters who did not compete but moved get their own reason
 (`Did not compete · Moved up 2 after results at FIGHTRANK 128`), as do positions that
-shift purely through inactivity decay.
+shift purely because recent form was re-weighted as results aged.
 
 ### 3.9 Scoped recalculation (§43)
 
@@ -328,6 +334,8 @@ message — they are not the last line of defence.
    supabase/migrations/0003_rls.sql
    supabase/migrations/0004_views.sql
    supabase/migrations/0005_config_defaults.sql
+   supabase/migrations/0006_fighter_identity.sql
+   supabase/migrations/0007_ranking_score.sql
    ```
 
    With the CLI:
@@ -463,7 +471,7 @@ src/
   pages/admin/          The admin panel
   layouts/ hooks/ lib/ types/
 supabase/
-  migrations/           0001 schema · 0002 functions · 0003 RLS · 0004 views · 0005 config
+  migrations/           0001 schema · 0002 functions · 0003 RLS · 0004 views · 0005 config · 0006 identity · 0007 ranking score
   seed.sql              Generated fictional demo data
 scripts/
   generate-seed.ts      Deterministic demo-data generator
